@@ -748,9 +748,6 @@ try:
         st.code(f"Asset name: {preview['name']}")
         st.code(f"Preheader:  {preview['preheader'] or '(none)'}")
 
-    with st.expander("Show rendered HTML preview (first ~600 chars)"):
-        st.code(preview["html"][:600] + "…", language="html")
-
     if debug_mode:
         with st.expander("Debug — full SupportNotesData (JSON)"):
             import json
@@ -802,22 +799,6 @@ if create_btn:
 # ---------------------------------------------------------------------------
 # Footer aids
 # ---------------------------------------------------------------------------
-
-with st.expander("ℹ️ About this tool"):
-    st.markdown(
-        """
-        This tool parses a Support Notes request `.eml` (the kind sent by the
-        translation team) and uses Claude to extract structured slot data.
-        After review and editing, it composites speaker headshots onto the
-        Siemens petrol-green brand background, uploads them to SFMC, and
-        creates the rendered HTML email asset in the per-language Content
-        Builder folder.
-
-        * Korean folder: `MC_EMAIL_FOLDER_ID_KO` ‧ Images folder: `MC_IMAGES_FOLDER_ID`
-        * Add `ANTHROPIC_API_KEY` to enable AI extraction; without it, all
-          editorial fields start blank for manual entry.
-        """
-    )
 
 # Reset / draft management
 col_restart, col_deldraft = st.columns([1, 1])
