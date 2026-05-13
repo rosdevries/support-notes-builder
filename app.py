@@ -59,6 +59,7 @@ from builder import (  # noqa: E402
     icon_config,
     icon_library,
     language_config,
+    pptx_parser,
     sfmc_client,
     slot_renderer,
     static_slots,
@@ -101,7 +102,7 @@ if not st.session_state.get("authed"):
 
 st.title("📰 Support Notes → SFMC")
 st.caption(
-    "Upload a Support Notes request `.eml`, review the extracted content, "
+    "Upload a Support Notes request `.eml` or `.pptx`, review the extracted content, "
     "upload speaker headshots, and create the email asset in SFMC."
 )
 
@@ -265,8 +266,8 @@ with col_lang:
 
 with col_file:
     eml_file = st.file_uploader(
-        "Drop the request .eml file here",
-        type=["eml"],
+        "Drop the request file here (.eml or .pptx)",
+        type=["eml", "pptx"],
         key=f"eml_uploader_{st.session_state.upload_gen}",
     )
 
@@ -279,11 +280,20 @@ with col_dbg:
     debug_mode = st.checkbox("Show debug info", value=False)
 
 if parse_btn and eml_file is not None:
-    with st.spinner("Parsing .eml and extracting content with Claude…"):
+    _is_pptx = eml_file.name.lower().endswith(".pptx")
+    _spinner_msg = "Parsing PPTX…" if _is_pptx else "Parsing .eml and extracting content with Claude…"
+    with st.spinner(_spinner_msg):
         try:
             raw = eml_file.read()
-            parsed = eml_parser.parse(raw)
-            data, ai_error = email_builder.parse_only(io.BytesIO(raw), language=chosen_lang)
+            if _is_pptx:
+                data, _pptx_images = pptx_parser.parse(raw)
+                data.language = chosen_lang
+                ai_error = None
+                _attachments = _pptx_images
+            else:
+                parsed = eml_parser.parse(raw)
+                data, ai_error = email_builder.parse_only(io.BytesIO(raw), language=chosen_lang)
+                _attachments = parsed.attachments
             if ai_error:
                 st.warning(
                     f"⚠️ AI extraction failed — form fields will be empty. "
@@ -328,7 +338,7 @@ if parse_btn and eml_file is not None:
                 st.session_state._draft_restored = False
 
             st.session_state.data = data
-            st.session_state.eml_attachments = parsed.attachments
+            st.session_state.eml_attachments = _attachments
             st.session_state.photo_urls = {}
             st.session_state.upload_gen += 1
             st.session_state.last_create_result = None
@@ -552,6 +562,41 @@ def _render_editorial_form(label: str, section: EditorialSection, idx: int) -> E
                     'border-radius:4px;border:1px dashed #999;"></div>',
                     unsafe_allow_html=True,
                 )
+
+            # Quick-select from headshots embedded in the uploaded PPTX.
+            _pptx_imgs = [
+                a for a in st.session_state.get("eml_attachments", [])
+                if a.content_type.startswith("image/")
+            ]
+            if _pptx_imgs:
+                st.caption("From PPTX:")
+                for _pi, _pa in enumerate(_pptx_imgs):
+                    try:
+                        st.image(_pa.bytes, width=55)
+                    except Exception:
+                        st.caption(_pa.filename)
+                    if st.button(
+                        "Use",
+                        key=f"sec{idx}_pptx_{gen}_{_pi}",
+                        help=f"Composite and upload {_pa.filename}",
+                    ):
+                        if not section.speaker.name.strip():
+                            st.error("Enter the speaker name first.")
+                        else:
+                            with st.spinner("Processing and uploading to SFMC…"):
+                                try:
+                                    _comp = headshot_compositor.composite_headshot(_pa.bytes)
+                                    _cdn = sfmc_client.replace_image_bytes(
+                                        _comp.png_bytes,
+                                        section.speaker.name,
+                                        _images_folder_id(),
+                                        f"{section.speaker.name}.png",
+                                    )
+                                    section.speaker.photo_url = _cdn
+                                    st.session_state.photo_urls[section.speaker.name] = _cdn
+                                    st.rerun()
+                                except Exception as _exc:
+                                    st.error(f"Upload failed: {_exc}")
 
             uploaded = st.file_uploader(
                 "Upload",

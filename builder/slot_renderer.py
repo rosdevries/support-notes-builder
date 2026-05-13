@@ -380,8 +380,9 @@ def _render_webinar_callout(data: SupportNotesData) -> str:
     cfg = language_config.get(data.language)
     lang_attr = cfg.html_lang
 
-    # "Got more questions?" header — use AI-extracted text when available,
-    # otherwise fall back to the localised phrase template.
+    # "Still have questions?" / "Got more questions?" header.
+    # Use AI-extracted text when available (EML import path); otherwise fall
+    # back to the localised phrase template (PPTX import and manual entry).
     if data.webinar_header_html:
         header_html = (
             '<br/>\n'
@@ -392,15 +393,25 @@ def _render_webinar_callout(data: SupportNotesData) -> str:
             '</span></span></span>'
         )
     else:
+        # Use the extracted webinar_series_url when available so the inline
+        # link points to the right destination; fall back to the EN/global
+        # webinar KB article if nothing was extracted.
+        _webinar_href = (
+            data.webinar_series_url.strip()
+            if data.webinar_series_url.strip()
+            else "http://support.sw.siemens.com/en-US/knowledge-base/MG617021"
+        )
+        _pre_link = _localised_phrase("pre_link", data.language)
         header_html = (
             '<br/>\n'
             '<span style="font-size:13px;">'
             '<span style="font-family:Arial,Helvetica,sans-serif;">'
             f'<span lang="{lang_attr}">'
             f'<b>{_localised_phrase("further_questions", data.language)}</b>'
+            f'{_pre_link}'
             '<a alias="Register for upcoming webinars" conversion="false" '
             'data-linkto="http://" '
-            'href="http://support.sw.siemens.com/en-US/knowledge-base/MG617021" '
+            f'href="{_webinar_href}" '
             'style="color:#000000;text-decoration:underline;" '
             'title="Register for upcoming webinars">'
             f'{_localised_phrase("upcoming_webinar", data.language)}</a>'
@@ -432,9 +443,13 @@ def _render_webinar_callout(data: SupportNotesData) -> str:
         if items:
             bullets_html = '<ul type="disc">\n' + "".join(items) + "</ul>"
 
-    # Webinar series link
+    # Webinar series link — only rendered when the webinar URL is NOT already
+    # embedded inline in the header sentence (i.e. pre_link is empty).
+    # For English the URL is folded into "Still have questions? … upcoming live
+    # webinars." so a duplicate series block would create a double link.
     series_html = ""
-    if has_series:
+    _has_inline_link = bool(_localised_phrase("pre_link", data.language)) if not data.webinar_header_html else False
+    if has_series and not _has_inline_link:
         series_html = (
             '<span style="font-size:13px;">'
             '<span style="font-family:Arial,Helvetica,sans-serif;">'
@@ -532,6 +547,7 @@ def render_section3_resources(data: SupportNotesData) -> str:
 _PHRASES = {
     "ko": {
         "further_questions":  "더 궁금한 점이 있으신가요? ",
+        "pre_link":           "",
         "upcoming_webinar":   "다가오는 라이브 웨비나",
         "ask_experts":        "에서 전문가들에게 궁금한 것들을 질문해 보세요.",
         "download":           "다운로드",
@@ -541,9 +557,13 @@ _PHRASES = {
         "month_format":       "{year}년 {month}월",
     },
     "en": {
-        "further_questions":  "Got more questions? ",
-        "upcoming_webinar":   "Upcoming live webinar",
-        "ask_experts":        " — ask the experts what you want to know.",
+        "further_questions":  "Still have questions? ",
+        # pre_link text appears between the bold intro and the hyperlink.
+        # For English the sentence reads: "Still have questions?  Quiz our
+        # experts at our [upcoming live webinars]." — no separate series block.
+        "pre_link":           " Quiz our experts at our ",
+        "upcoming_webinar":   "upcoming live webinars",
+        "ask_experts":        ".",
         "download":           "Download",
         "latest_release":     "Latest release",
         "webinar_series":     "{product} webinar series",
@@ -552,6 +572,7 @@ _PHRASES = {
     },
     "ja": {
         "further_questions":  "他にご質問はありますか? ",
+        "pre_link":           "",
         "upcoming_webinar":   "ライブウェビナー",
         "ask_experts":        "で専門家に質問してみましょう。",
         "download":           "ダウンロード",
@@ -562,6 +583,7 @@ _PHRASES = {
     },
     "zh-CN": {
         "further_questions":  "还有疑问吗? ",
+        "pre_link":           "",
         "upcoming_webinar":   "即将举办的网络研讨会",
         "ask_experts":        " — 向专家提问您关心的问题。",
         "download":           "下载",
@@ -572,6 +594,7 @@ _PHRASES = {
     },
     "zh-TW": {
         "further_questions":  "還有其他問題嗎? ",
+        "pre_link":           "",
         "upcoming_webinar":   "即將舉行的網路研討會",
         "ask_experts":        " — 向專家提出您想了解的問題。",
         "download":           "下載",
