@@ -33,13 +33,13 @@ _SUBSCRIBE_PROFILE_URLS = {
 }
 
 
-def get_subscribe_button(language: str, subscribe_url: str = "") -> str:
+def get_subscribe_button(language: str, subscribe_url: str = "", button_text: str = "") -> str:
     """Return the yellow Subscribe button HTML for the given language.
 
-    ``subscribe_url`` overrides the default profile URL when set (e.g. when
-    the AI extractor pulled a custom link from the .eml).
+    ``subscribe_url`` overrides the default profile URL when set.
+    ``button_text`` overrides the language-default label when set.
     """
-    label = _SUBSCRIBE_LABELS.get(language, "Subscribe")
+    label = button_text.strip() or _SUBSCRIBE_LABELS.get(language, "Subscribe")
     url = subscribe_url.strip() or _SUBSCRIBE_PROFILE_URLS.get(language, _SUBSCRIBE_PROFILE_URLS["en"])
     return (
         '<table cellpadding="0" cellspacing="0" class="stylingblock-content-wrapper" '

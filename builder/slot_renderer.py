@@ -190,7 +190,7 @@ def render_headersubscribebuttondate(data: SupportNotesData) -> str:
         f"<b>{_html.escape(date_label)}</b>"
         "</span></span></span></div></td></tr></table>"
     )
-    return static_slots.get_subscribe_button(data.language, data.subscribe_url) + date_block
+    return static_slots.get_subscribe_button(data.language, data.subscribe_url, data.subscribe_button_text) + date_block
 
 
 def render_headerstrapline(data: SupportNotesData) -> str:

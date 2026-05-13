@@ -122,7 +122,8 @@ class SupportNotesData:
     # --- Header ----------------------------------------------------------
     header_title: str = ""           # localised, e.g. "TESSENT 지원 노트"
     header_strapline: str = ""       # localised, e.g. "유용한 Tessent™ 팁과…"
-    subscribe_url: str = ""          # the "구독신청" link target
+    subscribe_url: str = ""          # the "구독신청" button link target
+    subscribe_button_text: str = ""  # overrides the language-default label when set
 
     # --- Editorials ------------------------------------------------------
     section1: EditorialSection = field(default_factory=EditorialSection)

@@ -13,6 +13,7 @@ Differences from the webinar app:
 
 from __future__ import annotations
 
+import datetime
 import io
 import os
 import re
@@ -204,7 +205,7 @@ def _rich_editor(
   p {{ margin: 0 0 6px 0; }}
 </style></head>
 <body>{content}</body></html>"""
-            st.components.v1.html(preview_html, height=160, scrolling=True)
+            st.iframe(preview_html, height=160)
             st.caption("Read-only preview — switch to **HTML** to edit.")
         else:
             result = st_quill(
@@ -252,11 +253,12 @@ st.subheader("1. Upload a request")
 col_lang, col_file = st.columns([1, 3])
 with col_lang:
     # Build {label: code} dict so the dropdown shows the human-readable name.
-    lang_options = {cfg.label: code for code, cfg in language_config.LANGUAGES.items()}
+    lang_options = dict(sorted(
+        {cfg.label: code for code, cfg in language_config.LANGUAGES.items()}.items()
+    ))
     chosen_label = st.selectbox(
         "Language",
         list(lang_options.keys()),
-        index=0,  # Korean first — that's the brief
         key="lang_picker",
     )
     chosen_lang = lang_options[chosen_label]
@@ -268,9 +270,11 @@ with col_file:
         key=f"eml_uploader_{st.session_state.upload_gen}",
     )
 
-col_parse, col_dbg = st.columns([3, 1])
+col_parse, col_fresh, col_dbg = st.columns([3, 2, 1])
 with col_parse:
     parse_btn = st.button("📥 Parse and extract", type="primary", disabled=eml_file is None)
+with col_fresh:
+    fresh_btn = st.button("✏️ Start from scratch", help="Open a blank form to build an email manually")
 with col_dbg:
     debug_mode = st.checkbox("Show debug info", value=False)
 
@@ -351,6 +355,16 @@ if parse_btn and eml_file is not None:
             if debug_mode:
                 st.code(traceback.format_exc())
 
+if fresh_btn:
+    _today = datetime.date.today()
+    _blank = SupportNotesData(language=chosen_lang, year=_today.year, month=_today.month)
+    st.session_state.data = _blank
+    st.session_state.eml_attachments = []
+    st.session_state.photo_urls = {}
+    st.session_state.upload_gen += 1
+    st.session_state.last_create_result = None
+    st.session_state._draft_restored = False
+
 
 # ---------------------------------------------------------------------------
 # Step 2-onwards: only show if we have parsed data
@@ -358,7 +372,7 @@ if parse_btn and eml_file is not None:
 
 data: SupportNotesData | None = st.session_state.get("data")
 if data is None:
-    st.info("Upload a request `.eml` above and click **Parse and extract** to begin.")
+    st.info("Upload a request `.eml` above and click **Parse and extract**, or click **Start from scratch** to build manually.")
     st.stop()
 
 st.divider()
@@ -407,6 +421,23 @@ with st.container(border=True):
         height=70,
         key=f"hdr_strap_{st.session_state.upload_gen}",
     )
+    _sub_col1, _sub_col2 = st.columns([1, 2])
+    with _sub_col1:
+        data.subscribe_button_text = st.text_input(
+            "Subscribe button text",
+            data.subscribe_button_text,
+            placeholder="Leave blank to use language default",
+            help="Overrides the language-default label (e.g. '구독신청', 'Subscribe') when set",
+            key=f"sub_text_{st.session_state.upload_gen}",
+        )
+    with _sub_col2:
+        data.subscribe_url = st.text_input(
+            "Subscribe button URL",
+            data.subscribe_url,
+            placeholder="Leave blank to use language default",
+            help="Overrides the default account.sw.siemens.com profile URL when set",
+            key=f"sub_url_{st.session_state.upload_gen}",
+        )
     data.preheader = st.text_input(
         "Preheader (≤ 85 chars recommended)",
         data.preheader,
