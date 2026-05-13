@@ -1,0 +1,40 @@
+# Credentials
+.env
+.streamlit/secrets.toml
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual envs
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build / fixtures (debug captures)
+fixtures/
+*.eml.cache
+
+# User draft saves (local corrections that survive re-imports)
+drafts/
+
+# User icon config (CDN URLs chosen in the icon picker)
+data/icon_config.json
+
+# pip artefacts (e.g. `=0.9` from mis-parsed version specifiers)
+=*

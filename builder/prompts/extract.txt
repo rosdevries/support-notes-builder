@@ -1,0 +1,56 @@
+You are extracting structured content from a Siemens Support Notes newsletter request email.
+
+The email is an internal request from the content team, sent in HTML format. It describes
+the content for one monthly Support Notes send. It contains:
+
+- Product name (e.g. "Tessent", "Functional Verification", "Calibre")
+- Year and month of the newsletter
+- Two editorial sections, each with:
+  - A Q&A question headline (shown in a yellow speech bubble in the email)
+  - Speaker name and job title
+  - Editorial body paragraph (2–4 sentences, the main article text)
+  - A KBA (Knowledge Base Article) name and URL
+  - Optional tag keywords associated with the KBA
+- An upcoming live webinar: date and title
+- Latest release version line(s) (e.g. "Tessent 2026.1", "Tessent 2026.1-p1")
+- Optional one-line product tagline (strapline)
+- Optional subscribe link URL
+
+Extract all available information and return it as a single JSON object matching
+this exact schema:
+
+{
+  "product": "string — exact product name as it appears in the email",
+  "year": integer,
+  "month": integer between 1 and 12,
+  "strapline": "string — one-line tagline, or empty string if not present",
+  "speaker1": {
+    "name": "string",
+    "title": "string",
+    "quote": "string — the question headline that appears in the speech bubble",
+    "editorial": "string — body paragraph as plain text (no HTML tags)",
+    "kba_title": "string — KBA article name",
+    "kba_url": "string — KBA article URL, or empty string",
+    "kba_tags": ["string", ...]
+  },
+  "speaker2": {
+    "name": "string",
+    "title": "string",
+    "quote": "string",
+    "editorial": "string",
+    "kba_title": "string",
+    "kba_url": "string",
+    "kba_tags": ["string", ...]
+  },
+  "webinar_date": "string — date of the upcoming webinar in natural-language format as written in the email",
+  "webinar_title": "string — title of the upcoming webinar",
+  "release_lines": ["string", ...],
+  "subscribe_url": "string — subscribe link URL if present, or empty string"
+}
+
+Rules:
+- Return ONLY valid JSON. No explanation, no code fences, no markdown.
+- If a field is not found in the email, use an empty string or empty list as appropriate.
+- Preserve the original language of all text fields (do not translate).
+- kba_tags may be an empty list if no tags are mentioned.
+- release_lines should be one string per release entry (e.g. ["Tessent 2026.1", "Tessent 2026.1-p1"]).
