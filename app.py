@@ -52,6 +52,7 @@ for _k in _SECRET_KEYS:
 
 # Imports must follow secrets bridging — sfmc_client / language_config read env at use time.
 from builder import (  # noqa: E402
+    docx_parser,
     draft_store,
     email_builder,
     eml_parser,
@@ -102,7 +103,7 @@ if not st.session_state.get("authed"):
 
 st.title("📰 Support Notes → SFMC")
 st.caption(
-    "Upload a Support Notes request `.eml` or `.pptx`, review the extracted content, "
+    "Upload a Support Notes request `.eml`, `.pptx`, or `.docx`, review the extracted content, "
     "upload speaker headshots, and create the email asset in SFMC."
 )
 
@@ -266,8 +267,8 @@ with col_lang:
 
 with col_file:
     eml_file = st.file_uploader(
-        "Drop the request file here (.eml or .pptx)",
-        type=["eml", "pptx"],
+        "Drop the request file here (.eml, .pptx, or .docx)",
+        type=["eml", "pptx", "docx"],
         key=f"eml_uploader_{st.session_state.upload_gen}",
     )
 
@@ -281,7 +282,12 @@ with col_dbg:
 
 if parse_btn and eml_file is not None:
     _is_pptx = eml_file.name.lower().endswith(".pptx")
-    _spinner_msg = "Parsing PPTX…" if _is_pptx else "Parsing .eml and extracting content with Claude…"
+    _is_docx = eml_file.name.lower().endswith(".docx")
+    _spinner_msg = (
+        "Parsing PPTX…" if _is_pptx else
+        "Parsing .docx and extracting content with Claude…" if _is_docx else
+        "Parsing .eml and extracting content with Claude…"
+    )
     with st.spinner(_spinner_msg):
         try:
             raw = eml_file.read()
@@ -290,6 +296,10 @@ if parse_btn and eml_file is not None:
                 data.language = chosen_lang
                 ai_error = None
                 _attachments = _pptx_images
+            elif _is_docx:
+                data, _docx_images, ai_error = docx_parser.parse(raw)
+                data.language = chosen_lang
+                _attachments = _docx_images
             else:
                 parsed = eml_parser.parse(raw)
                 data, ai_error = email_builder.parse_only(io.BytesIO(raw), language=chosen_lang)
@@ -382,7 +392,7 @@ if fresh_btn:
 
 data: SupportNotesData | None = st.session_state.get("data")
 if data is None:
-    st.info("Upload a request `.eml` above and click **Parse and extract**, or click **Start from scratch** to build manually.")
+    st.info("Upload a request `.eml`, `.pptx`, or `.docx` above and click **Parse and extract**, or click **Start from scratch** to build manually.")
     st.stop()
 
 st.divider()
