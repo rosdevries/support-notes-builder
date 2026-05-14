@@ -167,6 +167,17 @@ def _ai_extract(body_text: str) -> SupportNotesData:
     system_prompt = PROMPT_PATH.read_text(encoding="utf-8")
 
     user_msg = (
+        "CRITICAL RULE FOR THIS REQUEST: The source is a .docx content template "
+        "that contains ONLY editorial section content (speakers, quotes, articles). "
+        "It does NOT contain a header title, header strapline, preheader, subscribe "
+        "URL, webinar details, or release components. "
+        "You MUST return an empty string \"\" for every field that is not "
+        "explicitly present in the document below — do NOT generate, invent, or "
+        "hallucinate values for missing fields. In particular: header_title, "
+        "header_strapline, preheader, subscribe_url, webinar_series_url, "
+        "webinar_header_html, promo_block_html, footnote_html, and "
+        "latest_release.components must all be \"\" or [] unless the text below "
+        "contains them verbatim.\n\n"
         "EDITOR_NOTES (plain text extracted from a .docx content template; "
         "hyperlinks are annotated as 'link text [URL]'; "
         "tables are shown as [row,col] cell grid):\n"
@@ -174,7 +185,8 @@ def _ai_extract(body_text: str) -> SupportNotesData:
         + "\n\n=========================\n\n"
         + "EMAIL_PREVIEW (HTML — the mock-up of the final email):\n"
         + "(none — this is a .docx content template; "
-        "extract ALL content from EDITOR_NOTES instead)"
+        "extract ONLY the editorial sections from EDITOR_NOTES; "
+        "leave all other fields as empty strings)"
     )
 
     msg = client.messages.create(
