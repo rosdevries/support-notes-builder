@@ -12,3 +12,4 @@ anthropic>=0.25
 Pillow>=10.0
 streamlit-quill>=0.0.3
 truststore>=0.9
+json-repair>=0.30

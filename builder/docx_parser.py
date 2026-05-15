@@ -204,9 +204,13 @@ def _ai_extract(body_text: str) -> SupportNotesData:
     try:
         d = json.loads(raw)
     except json.JSONDecodeError as exc:
-        raise ValueError(
-            f"AI extractor returned non-JSON: {exc}\nFirst 400 chars:\n{raw[:400]}"
-        ) from exc
+        try:
+            from json_repair import repair_json
+            d = json.loads(repair_json(raw))
+        except Exception:
+            raise ValueError(
+                f"AI extractor returned non-JSON: {exc}\nFirst 400 chars:\n{raw[:400]}"
+            ) from exc
 
     return _data_from_ai_dict(d)
 
