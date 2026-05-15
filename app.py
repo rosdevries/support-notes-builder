@@ -129,6 +129,11 @@ _TABLE_TAGS_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Quill preserves background-color when content is pasted from external
+# documents (Word, web pages, etc.).  Strip it on every write so the
+# rendered email inherits the correct template background instead.
+_BG_COLOR_RE = re.compile(r'\bbackground-color\s*:[^;"\'>]+;?', re.IGNORECASE)
+
 
 def _quill_seed(html: str) -> str:
     """Strip HTML table structural elements before passing to Quill.
@@ -219,6 +224,7 @@ def _rich_editor(
             if result is not None:
                 # Strip the empty-paragraph artefacts Quill inserts for blank lines.
                 result = re.sub(r'<p>\s*(?:<br\s*/?>|&nbsp;)?\s*</p>', '', result, flags=re.IGNORECASE).strip()
+                result = _BG_COLOR_RE.sub('', result)
                 st.session_state[stored] = result
     else:
         ta_key = f"{key}_html_area"
