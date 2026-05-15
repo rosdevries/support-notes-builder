@@ -181,6 +181,7 @@ def _split_preview_from_notes(html: str) -> Tuple[str, str]:
     # --- pass 1: strip quoted reply, then search for the preview table ---
     soup = BeautifulSoup(html, "lxml")
     _strip_outlook_quoted_reply(soup)
+    reply_stripped = True
 
     outer_tables = [t for t in soup.find_all("table") if not t.find_parent("table")]
 
@@ -196,6 +197,23 @@ def _split_preview_from_notes(html: str) -> Tuple[str, str]:
         if len(candidate.get_text(" ", strip=True)) >= _PREVIEW_MIN_TEXT_LEN:
             preview_table = candidate
 
+    # If stripping removed all meaningful content, the request content IS the
+    # quoted section (e.g. a localisation team replies with the translated
+    # newsletter as the entire body, with nothing new above the Outlook
+    # separator).  Retry on the full unstripped HTML.
+    if preview_table is None and len(soup.get_text(strip=True)) < _PREVIEW_MIN_TEXT_LEN:
+        soup = BeautifulSoup(html, "lxml")
+        reply_stripped = False
+        outer_tables = [t for t in soup.find_all("table") if not t.find_parent("table")]
+        for t in outer_tables:
+            if (t.get("width") or "").strip() in _PREVIEW_WIDTH_CANDIDATES:
+                preview_table = t
+                break
+        if preview_table is None and outer_tables:
+            candidate = max(outer_tables, key=lambda t: len(t.get_text(" ", strip=True)))
+            if len(candidate.get_text(" ", strip=True)) >= _PREVIEW_MIN_TEXT_LEN:
+                preview_table = candidate
+
     if preview_table is None:
         # No mockup table found in the new content — treat everything as
         # editor notes and return an empty preview so the AI falls back.
@@ -203,7 +221,8 @@ def _split_preview_from_notes(html: str) -> Tuple[str, str]:
 
     # --- pass 2: build editor_notes from a clean copy of the (stripped) html ---
     soup_for_notes = BeautifulSoup(html, "lxml")
-    _strip_outlook_quoted_reply(soup_for_notes)
+    if reply_stripped:
+        _strip_outlook_quoted_reply(soup_for_notes)
 
     notes_pt = None
     for t in soup_for_notes.find_all("table"):
@@ -307,6 +326,8 @@ def parse_subject(subject: str) -> dict:
     """
     # Strip leading [TEST - ...]: prefix the test send-routes add
     cleaned = re.sub(r"^\s*\[[^\]]+\]\s*:\s*", "", subject).strip()
+    # Strip reply/forward prefixes that Outlook prepends (RE:, FW:, FWD:)
+    cleaned = re.sub(r"^\s*(?:RE|FW|FWD)\s*:", "", cleaned, flags=re.IGNORECASE).strip()
     cleaned = re.sub(r"\s+", " ", cleaned)
 
     for lang, pat in _SUBJECT_LANG_PATTERNS:
