@@ -79,6 +79,7 @@ _QUILL_EMPTY_P = re.compile(r'<p>\s*(?:<br\s*/?>|&nbsp;)?\s*</p>', re.IGNORECASE
 _HREF_RE = re.compile(r'href="([^"]*)"', re.IGNORECASE)
 _A_TAG_RE = re.compile(r'(<a\b[^>]*>)(.*?)(</a>)', re.IGNORECASE | re.DOTALL)
 _HAS_TITLE_RE = re.compile(r'\btitle\s*=', re.IGNORECASE)
+_HAS_TEXT_DECORATION_RE = re.compile(r'text-decoration\s*:', re.IGNORECASE)
 _STRIP_TAGS_RE = re.compile(r'<[^>]+>')
 
 
@@ -111,6 +112,30 @@ def ensure_anchor_titles(html_str: str) -> str:
             return m.group(0)  # image-only link — skip
         escaped = _html.escape(text, quote=True)
         new_open = open_tag[:-1] + f' title="{escaped}">'
+        return new_open + inner_html + close_tag
+
+    return _A_TAG_RE.sub(_fix, html_str)
+
+
+def ensure_anchor_underline(html_str: str) -> str:
+    """Add text-decoration:underline inline to any <a> tag that lacks it.
+
+    Gmail strips underlines from links via the u+#body CSS reset. Injecting
+    text-decoration:underline inline ensures underlines survive even when Gmail
+    scopes or discards the <style> block. Links that already declare any
+    text-decoration value (e.g. none on the subscribe button) are left alone.
+    """
+    def _fix(m: re.Match) -> str:
+        open_tag, inner_html, close_tag = m.group(1), m.group(2), m.group(3)
+        if _HAS_TEXT_DECORATION_RE.search(open_tag):
+            return m.group(0)
+        style_m = re.search(r'style\s*=\s*"([^"]*)"', open_tag, re.IGNORECASE)
+        if style_m:
+            existing = style_m.group(1).rstrip(";")
+            new_val = (existing + ";" if existing else "") + "text-decoration:underline"
+            new_open = open_tag[:style_m.start(1)] + new_val + open_tag[style_m.end(1):]
+        else:
+            new_open = open_tag[:-1] + ' style="text-decoration:underline">'
         return new_open + inner_html + close_tag
 
     return _A_TAG_RE.sub(_fix, html_str)
@@ -695,7 +720,8 @@ def render_slots(data: SupportNotesData) -> Dict[str, str]:
     if missing:
         raise RuntimeError(f"render_slots forgot to render: {missing}")
 
-    # Ensure every <a> has title= for SFMC link-tracking reports.
-    out = {k: ensure_anchor_titles(v) for k, v in out.items()}
+    # Ensure every <a> has title= for SFMC link-tracking reports and
+    # text-decoration:underline inline so Gmail renders links with underlines.
+    out = {k: ensure_anchor_titles(ensure_anchor_underline(v)) for k, v in out.items()}
 
     return out
