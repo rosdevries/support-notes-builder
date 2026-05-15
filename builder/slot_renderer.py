@@ -707,8 +707,11 @@ def render_slots(data: SupportNotesData) -> Dict[str, str]:
     out["section3contactdetails"] = render_section3_contactdetails(data)
     out["section3highlightrightcol"] = render_section3_highlight(data)
     out["section3resourcesrightcol"] = render_section3_resources(data)
+    _footnote_content = _strip_quill_cruft(data.footnote_html)
     out["section3fullwidth2"] = (
-        _strip_quill_cruft(data.footnote_html) or static_slots.get_footnote(data.language)
+        static_slots.wrap_footnote_content(_footnote_content)
+        if _footnote_content
+        else static_slots.get_footnote(data.language)
     )
 
     # Footer

@@ -198,8 +198,8 @@ def get_contact_body(language: str) -> str:
 # Section-3 fullwidth2: archive-links footnote (language-specific copy).
 # ---------------------------------------------------------------------------
 
-def _footnote_inner(intro: str, links: list, outro: str) -> str:
-    """Build the standard footnote table from localised text + link list."""
+def _footnote_body(intro: str, links: list, outro: str) -> str:
+    """Build the inner text+links string (no SFMC table wrapper)."""
     link_sep = ", "
     links_html = link_sep.join(
         f'<a alias="Support Notes archive ({lang_code})" conversion="false" '
@@ -208,10 +208,19 @@ def _footnote_inner(intro: str, links: list, outro: str) -> str:
         f'title="Support Notes archive ({lang_code})">{label}</a>'
         for lang_code, href, label in links
     )
+    return intro + links_html + outro
+
+
+def wrap_footnote_content(content: str) -> str:
+    """Wrap bare footnote text in the SFMC table structure with centre alignment.
+
+    Used by the slot renderer to promote AI-extracted or user-edited footnote
+    text into a properly structured SFMC content block.
+    """
     body = (
-        '<div style="text-align: left;">'
+        '<div style="text-align: center;">'
         '<span style="font-size:13px;"><span style="font-family:Arial,Helvetica,sans-serif;">'
-        + intro + links_html + outro
+        + content
         + '</span></span></div>'
     )
     return (
@@ -224,6 +233,11 @@ def _footnote_inner(intro: str, links: list, outro: str) -> str:
         + body
         + '</td></tr></table></td></tr></table>'
     )
+
+
+def _footnote_inner(intro: str, links: list, outro: str) -> str:
+    """Build the standard footnote table from localised text + link list."""
+    return wrap_footnote_content(_footnote_body(intro, links, outro))
 
 
 _ARCHIVE_LINKS_EN_KO = [
@@ -271,6 +285,51 @@ SECTION3_FULLWIDTH2_HTML = _SECTION3_FOOTNOTE["ko"]
 def get_footnote(language: str) -> str:
     """Return the archive-links footnote for the given language."""
     return _SECTION3_FOOTNOTE.get(language, _SECTION3_FOOTNOTE["en"])
+
+
+_SECTION3_FOOTNOTE_TEXT = {
+    "ko": _footnote_body(
+        '<span lang="ko-kr">이전의 뉴스레터들도 확인해보세요! </span>',
+        [("EN", "https://support.sw.siemens.com/en-US/knowledge-base/MG617016", "영어"),
+         ("KO", "https://support.sw.siemens.com/ko-KR/knowledge-base/MG617016_KO", "한국어")],
+        '<span lang="ko-kr"> 로 제공되는 자료들을 찾아보실 수 있습니다.</span>',
+    ),
+    "en": _footnote_body(
+        "Catch up on past Support Notes newsletters. Explore our archive in ",
+        [("EN", "https://support.sw.siemens.com/en-US/knowledge-base/MG617016", "English"),
+         ("KO", "https://support.sw.siemens.com/ko-KR/knowledge-base/MG617016_KO", "Korean")],
+        ".",
+    ),
+    "ja": _footnote_body(
+        "以前のニュースレターもご覧ください — ",
+        [("EN", "https://support.sw.siemens.com/en-US/knowledge-base/MG617016", "英語"),
+         ("KO", "https://support.sw.siemens.com/ko-KR/knowledge-base/MG617016_KO", "韓国語")],
+        "でもお読みいただけます。",
+    ),
+    "zh-CN": _footnote_body(
+        "查看我们以往的新闻通讯 — 提供",
+        [("EN", "https://support.sw.siemens.com/en-US/knowledge-base/MG617016", "英文"),
+         ("KO", "https://support.sw.siemens.com/ko-KR/knowledge-base/MG617016_KO", "韩文")],
+        "版本。",
+    ),
+    "zh-TW": _footnote_body(
+        "Catch up on past Support Notes newsletters. Explore our archive in ",
+        [("EN", "https://support.sw.siemens.com/en-US/knowledge-base/MG617016", "English"),
+         ("KO", "https://support.sw.siemens.com/ko-KR/knowledge-base/MG617016_KO", "Korean")],
+        ".",
+    ),
+}
+
+
+def get_footnote_text(language: str) -> str:
+    """Return the footnote content as a centre-aligned paragraph for the Quill editor seed.
+
+    Unlike ``get_footnote()``, this omits the outer SFMC table wrapper so that Quill
+    can display the text without stripping the alignment style.  The slot renderer
+    re-wraps the content in ``wrap_footnote_content()`` before sending to SFMC.
+    """
+    content = _SECTION3_FOOTNOTE_TEXT.get(language, _SECTION3_FOOTNOTE_TEXT["en"])
+    return f'<p style="text-align:center;">{content}</p>'
 
 
 # ---------------------------------------------------------------------------

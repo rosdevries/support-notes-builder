@@ -821,7 +821,7 @@ with st.container(border=True):
             st.session_state.pop(f"{_footnote_stored}_mode", None)
             st.rerun()
     data.footnote_html = _rich_editor(
-        data.footnote_html or static_slots.get_footnote(data.language),
+        data.footnote_html or static_slots.get_footnote_text(data.language),
         key=f"footnote_{st.session_state.upload_gen}",
         placeholder="Archive footnote text…",
     )
