@@ -179,7 +179,7 @@ def _split_preview_from_notes(html: str) -> Tuple[str, str]:
     content from editor notes alone.
     """
     # --- pass 1: strip quoted reply, then search for the preview table ---
-    soup = BeautifulSoup(html, "lxml")
+    soup = BeautifulSoup(html, "html.parser")
     _strip_outlook_quoted_reply(soup)
     reply_stripped = True
 
@@ -202,7 +202,7 @@ def _split_preview_from_notes(html: str) -> Tuple[str, str]:
     # newsletter as the entire body, with nothing new above the Outlook
     # separator).  Retry on the full unstripped HTML.
     if preview_table is None and len(soup.get_text(strip=True)) < _PREVIEW_MIN_TEXT_LEN:
-        soup = BeautifulSoup(html, "lxml")
+        soup = BeautifulSoup(html, "html.parser")
         reply_stripped = False
         outer_tables = [t for t in soup.find_all("table") if not t.find_parent("table")]
         for t in outer_tables:
@@ -220,7 +220,7 @@ def _split_preview_from_notes(html: str) -> Tuple[str, str]:
         return "", str(soup)
 
     # --- pass 2: build editor_notes from a clean copy of the (stripped) html ---
-    soup_for_notes = BeautifulSoup(html, "lxml")
+    soup_for_notes = BeautifulSoup(html, "html.parser")
     if reply_stripped:
         _strip_outlook_quoted_reply(soup_for_notes)
 

@@ -149,6 +149,9 @@ _MSO_STYLE_RE = re.compile(r'\bmso-[a-zA-Z-]+\s*:[^;"\'>]+;?', re.IGNORECASE)
 _MSO_CLASS_RE = re.compile(r'\bclass="[^"]*Mso[^"]*"', re.IGNORECASE)
 _MSO_XMLNS_RE = re.compile(r'\bxmlns:[ovwx]="[^"]*"', re.IGNORECASE)
 _MULTI_SPACE_RE = re.compile(r'[ \t]{2,}')
+# Entire <head> block — Word reply emails carry thousands of chars of CSS/XML
+# that the AI should never see.
+_HTML_HEAD_RE = re.compile(r'<head\b[^>]*>.*?</head\s*>', re.IGNORECASE | re.DOTALL)
 
 
 def _recover_release_urls(html: str) -> str:
@@ -202,6 +205,7 @@ def _clean_word_html(html: str) -> str:
     them reduces the HTML size by 20-30 % and makes it far easier for the AI
     to locate editorial text, speaker names, and structure.
     """
+    html = _HTML_HEAD_RE.sub('', html)      # <head>…</head> (Word CSS/XML dumps)
     html = _MSO_TAG_RE.sub('', html)       # <o:p>, </o:p>, <o:shapedefaults …/>
     html = _MSO_XMLNS_RE.sub('', html)     # xmlns:o="…" xmlns:v="…" etc.
     html = _MSO_STYLE_RE.sub('', html)     # mso-line-height-rule:exactly; etc.
