@@ -79,6 +79,16 @@ SFMC_CONTENT_BUILDER_URL = (
     "?entityType=none&entityID=0&ks=ks%23Content"
 )
 
+_PRODUCTS = [
+    "Aprisa",
+    "Calibre",
+    "Custom IC Verification",
+    "Custom IC Design (Tanner)",
+    "Functional Verification",
+    "PCB Design & Analysis",
+    "Tessent",
+]
+
 # ---------------------------------------------------------------------------
 # Page setup + password gate
 # ---------------------------------------------------------------------------
@@ -424,7 +434,17 @@ with st.container(border=True):
     st.markdown("**Metadata**")
     col_a, col_b, col_c, col_d = st.columns([2, 1, 1, 2])
     with col_a:
-        data.product = st.text_input("Product", data.product, key=f"product_{st.session_state.upload_gen}")
+        _product_lower = (data.product or "").strip().lower()
+        _product_idx = next(
+            (i for i, p in enumerate(_PRODUCTS) if p.lower() == _product_lower),
+            0,
+        )
+        data.product = st.selectbox(
+            "Product",
+            _PRODUCTS,
+            index=_product_idx,
+            key=f"product_{st.session_state.upload_gen}",
+        )
     with col_b:
         data.year = st.number_input(
             "Year", value=data.year or 2026, min_value=2020, max_value=2099, step=1,
@@ -576,10 +596,10 @@ def _render_editorial_form(label: str, section: EditorialSection, idx: int) -> E
             existing = section.speaker.photo_url
             has_photo = bool(existing) and "<!--" not in existing
             if has_photo:
-                try:
-                    st.image(existing, width=100)
-                except Exception:
-                    st.caption("📎 Photo on file")
+                st.markdown(
+                    f'<img src="{existing}" width="100" style="border-radius:4px;">',
+                    unsafe_allow_html=True,
+                )
             else:
                 st.markdown(
                     '<div style="width:100px;height:100px;background:#d8d8d8;'
